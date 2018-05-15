@@ -43,6 +43,12 @@ const gen = new Generator(10, 10, SYMBOLS)
 const elevation = gen.generate()
 console.log(elevation)
 
+const Terrain = ({ height, width, emoji, children }) => {
+  const gen = new Generator(10, 10, SYMBOLS)
+  const elevation = gen.generate()
+  return children(elevation)
+}
+
 const APP = {
   init: () => ({
     players: 0,
@@ -68,6 +74,37 @@ class App extends React.Component {
   render() {
     return (
       <div>
+        <Terrain height={10} width={10} emoji={SYMBOLS}>
+          {elevation => (
+            <Fragment>
+              <style>{`
+            section {
+              display: grid;
+              grid-template-rows: repeat(10, 1fr);
+              grid-template-columns: repeat(10, 1fr);
+              max-width: 960px;
+              margin: 0 auto;
+            }
+            .cell {
+              background: none;
+              border: none;
+              padding: 0;
+              font-size: 3rem;
+              text-align: center;
+            }
+            `}</style>
+              <section>
+                {elevation.map(row =>
+                  row.map(cell => (
+                    <button className="cell" key={cell.id}>
+                      {cell.biome.symbol}
+                    </button>
+                  )),
+                )}
+              </section>
+            </Fragment>
+          )}
+        </Terrain>
         {this.state.stage === 1 ? (
           <div>
             <label>
@@ -85,30 +122,6 @@ class App extends React.Component {
           </div>
         ) : (
           <main>
-            <style>{`
-            section {
-              display: grid;
-              grid-template-rows: repeat(10, 1fr);
-              grid-template-columns: repeat(10, 1fr);
-              max-width: 960px;
-              margin: 0 auto;
-            }
-
-            section div {
-              font-size: 3rem;
-              text-align: center;
-            }
-            `}</style>
-            <section>
-              {this.state.grid.map(row =>
-                row.map(cell => (
-                  <div key={cell.id}>
-                    {cell.biome.symbol}
-                  </div>
-                )),
-              )}
-            </section>
-
             <aside>
               <h2> Stats</h2>
               <p>Number of Players: {this.state.players}</p>
