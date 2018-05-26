@@ -3,7 +3,86 @@ import React, { Component, Fragment } from 'react'
 import logo from './logo.svg'
 import './App.css'
 
-import Generator from './terrain.js'
+import simplex from 'simplex-noise'
+
+class TerrainGenerator {
+  constructor(height, width, emoji) {
+    this.height = height
+    this.width = width
+    this.emoji = emoji
+    this.simplex = new simplex(Math.random)
+  }
+
+  noise = (x, y) => this.simplex.noise2D(x, y) / 2 + 0.5
+
+  getBiome = ({ elevation: e, moisture: m }) => {
+    if (e < 0.1) return this.emoji['Ocean']
+    if (e < 0.12) return this.emoji['Beach']
+
+    if (e > 0.8) {
+      // if (m < 0.1) return SCORCHED
+      // if (m < 0.2) return BARE
+      // if (m < 0.5) return TUNDRA
+      return this.emoji['Snowy Mountains']
+    }
+
+    if (e > 0.6) {
+      if (m < 0.33) return this.emoji['Desert']
+      // if (m < 0.66) return SHRUBLAND
+      // return TAIGA
+    }
+
+    if (e > 0.3) {
+      if (m < 0.16) return this.emoji['Desert']
+      if (m < 0.5) return this.emoji['Grass']
+      if (m < 0.83) return this.emoji['Trees']
+      // return TEMPERATE_RAIN_FOREST
+    }
+
+    // if (m < 0.16) return SUBTROPICAL_DESERT
+    if (m < 0.33) return this.emoji['Grass']
+    // if (m < 0.66) return TROPICAL_SEASONAL_FOREST
+    // return TROPICAL_RAIN_FOREST
+
+    return this.emoji['Corn']
+  }
+
+  generate = () => {
+    const { height, width } = this
+
+    let elevation = []
+    for (let y = 0; y < height; y++) {
+      elevation[y] = []
+      for (let x = 0; x < width; x++) {
+        let nx = x / width - 0.5,
+          ny = y / height - 0.5
+        let e =
+          1 * this.noise(1 * nx, 1 * ny) +
+          0.5 * this.noise(2 * nx, 2 * ny) +
+          0.25 * this.noise(4 * nx, 4 * ny)
+
+        let m =
+          0.9 * this.noise(0.9 * nx, 0.9 * ny) +
+          0.4 * this.noise(2.1 * nx, 2.1 * ny) +
+          0.15 * this.noise(4.1 * nx, 4.1 * ny)
+        // 1 * this.noise(1 * nx, 1 * ny) +
+        // 2 * this.noise(0.5 * nx, 0.5 * ny) +
+        // 4 * this.noise(0.25 * nx, 0.25 * ny)
+        elevation[y][x] = {
+          elevation: Math.pow(e, 1.0),
+          moisture: Math.pow(m, 1.0),
+        }
+      }
+    }
+    return elevation.map((rows, x) =>
+      rows.map((cell, y) => ({
+        ...cell,
+        id: `id-${x}-${y}`,
+        biome: this.getBiome(cell),
+      })),
+    )
+  }
+}
 
 const SYMBOLS = {
   Fertalizer: {
@@ -38,68 +117,25 @@ const SYMBOLS = {
   },
 }
 
-const gen = new Generator(10, 10, SYMBOLS)
-
-const elevation = gen.generate()
-console.log(elevation)
-
-class Terrain extends React.Component {
-  shouldComponentUpdate(prevProps) {
-    if (
-      this.props.height !== prevProps.height ||
-      this.props.width !== prevProps.width ||
-      prevProps.emoji !== this.props.emoji
-    ) {
-      return true
-    }
-    return false
-  }
-  render() {
-    const { height, width, emoji, children } = this.props
-
-    const gen = new Generator(10, 10, SYMBOLS)
-    const elevation = gen.generate()
-    return children(elevation)
-  }
-}
-
 const APP = {
   init: () => ({
     players: 0,
     round: 0,
     stage: 1,
-    grid: elevation,
+    grid: new TerrainGenerator(10, 10, SYMBOLS).generate(),
     moves: [],
     player: 1,
   }),
 }
 
 const EmojiGrid = ({ children }) => (
-  <Fragment>
-    <style>{`.EmojiGrid {
-      display: grid;
-      grid-template-rows: repeat(10, 1fr);
-      grid-template-columns: repeat(10, 1fr);
-      max-width: 960px;
-      margin: 0 auto;
-    }`}</style>
-    <section className="EmojiGrid">{children}</section>
-  </Fragment>
+  <section className="EmojiGrid">{children}</section>
 )
 
 const EmojiCell = ({ children, onClick }) => (
-  <Fragment>
-    <style>{`.EmojiCell {
-      background: none;
-      border: none;
-      padding: 0;
-      font-size: 3rem;
-      text-align: center;
-    }`}</style>
-    <button className="EmojiCell" onClick={onClick}>
-      {children}
-    </button>
-  </Fragment>
+  <button className="EmojiCell" onClick={onClick}>
+    {children}
+  </button>
 )
 
 const SelectionBar = ({
@@ -107,40 +143,45 @@ const SelectionBar = ({
   onDecline,
   children,
 }) => (
-  <Fragment>
-    <style>{`.SelectionBar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      min-height: 5rem;
-      background-color: mediumspringgreen;
-    }`}</style>
-    <div className="SelectionBar">
-      {children}
-      <button onClick={onAccept}>Accept</button>
-      <button onClick={onDecline}>Decline</button>
-    </div>
-  </Fragment>
+  <aside className="SelectionBar">
+    {children}
+    <button
+      onClick={onAccept}
+      className="SelectionBar-accept"
+    >
+      Accept
+    </button>
+    <button
+      onClick={onDecline}
+      className="SelectionBar-decline"
+    >
+      Decline
+    </button>
+  </aside>
 )
 
 const EMOJICLICK = 'EMOJI-CLICK'
 const CLEAREMOJI = 'CLEAREMOJI'
 const SELECTEMOJI = 'SELECTEMOJI'
+const STARTGAME = 'STARTGAME'
 
 class App extends React.Component {
   state = {
     ...APP.init(),
   }
 
-  updateState = (update, t = null) => {
-    let action
-    let type
-    if (t === null) {
-      type = update.type
-      const { type: ty, ...stuff } = update
-      action = stuff
+  updateState = (update, secondArg = null) => {
+    const updateType = typeof update
+
+    let type, action
+
+    if (updateType === 'function') {
+      type = secondArg
+      action = update
+    } else {
+      ;({ type, ...action } = update)
     }
+
     // @TODO
 
     switch (type) {
@@ -159,6 +200,10 @@ class App extends React.Component {
         break
       }
       case SELECTEMOJI: {
+        this.setState(action)
+        break
+      }
+      case STARTGAME: {
         this.setState(action)
         break
       }
@@ -186,7 +231,6 @@ class App extends React.Component {
   }
 
   handleEmojiSelection = () => {
-    console.log('here')
     this.updateState(
       previousState => ({
         moves: [
@@ -214,28 +258,119 @@ class App extends React.Component {
     })
   }
 
+  startGame = () => {
+    this.updateState(previousState => {
+      if (previousState.players === 0) {
+        return {
+          playerSelectError:
+            'You must select more than 0 players!',
+        }
+      }
+      return {
+        activePlayer: 'one',
+        stage: previousState.stage + 1,
+      }
+    }, STARTGAME)
+  }
+
   render() {
-    console.log(this.state.moves)
     return (
-      <div>
-        {this.state.showSelection && (
-          <SelectionBar
-            onAccept={this.handleEmojiSelection}
-            onDecline={this.handleEmojiClear}
-          >
-            Emoji pre-selected, accept selection?
-          </SelectionBar>
-        )}
-        <Terrain height={10} width={10} emoji={SYMBOLS}>
-          {elevation => (
+      <React.Fragment>
+        <style>
+          {`
+            :root {
+              font-size: 18px;
+              font-family: sans-serif;
+              box-sizing: border-box;
+            }
+            *,
+            *::before,
+            *::after {
+              box-sizing: inherit;
+            }
+            .Container {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              max-width: 968px;
+              min-height: 100vh;
+              flex-direction: column;
+            }
+            .Game {
+              display: grid;
+              grid-template-columns: 1fr 300px;
+            }
+            .Error {
+              color: red;
+              text-decoration: underline;
+            }
+
+            .EmojiGrid {
+              display: grid;
+              grid-template-rows: repeat(10, 1fr);
+              grid-template-columns: repeat(10, 1fr);
+            }
+            .EmojiCell {
+              background: none;
+              border: none;
+              padding: 0;
+              font-size: 3rem;
+              text-align: center;
+            }
+
+            .SelectionBar {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              width: 100%;
+              min-height: 5rem;
+              background-color: mediumspringgreen;
+              display: flex;
+              justify-content: space-around;
+              align-items: center;
+            }
+        
+            .SelectionBar-accept,
+            .SelectionBar-decline {
+              padding: .5em 2em;
+              border: none;
+              border-radius: 5px;
+              font-size: 18px;
+              opacity: .7;
+            }
+          `}
+        </style>
+        {this.state.stage === 1 ? (
+          <main className="Container">
+            <label>
+              Choose the number of players:
+              <input
+                type="number"
+                value={this.state.players}
+                onChange={this.handlePlayersSelection}
+              />
+            </label>
+            <br />
+            {this.state.playerSelectError ? (
+              <p className="Error">
+                {this.state.playerSelectError}
+              </p>
+            ) : null}
+            <br />
+            <button onClick={this.startGame}>
+              Start Game
+            </button>
+          </main>
+        ) : (
+          <main className="Game">
             <EmojiGrid>
-              {elevation.map((row, x) =>
+              {this.state.grid.map((row, x) =>
                 row.map((cell, y) => (
                   <EmojiCell
                     key={cell.id}
                     onClick={() =>
                       this.handleEmojiClick(
-                        cell.biome.symbol,
+                        cell.biome,
                         x,
                         y,
                       )
@@ -246,53 +381,45 @@ class App extends React.Component {
                 )),
               )}
             </EmojiGrid>
-          )}
-        </Terrain>
-        {this.state.stage === 1 ? (
-          <div>
-            <label>
-              Choose the number of players:
-              <input
-                min="1"
-                type="number"
-                value={this.state.players}
-                onChange={this.handlePlayersSelection}
-              />
-            </label>
-            <button onClick={this.nextState}>
-              Start Game
-            </button>
-          </div>
-        ) : (
-          <main>
             <aside>
-              <h2> Stats</h2>
-              <p>Number of Players: {this.state.players}</p>
-              <p>Emoji Legend:</p>
-              <ul>
-                <li>Fertalizer: 💩</li>
-                <li>Grass: 🌱</li>
-                <li>Sapling: 🌿</li>
-                <li>Tree: 🌲</li>
-                <li>Mountains: ⛰</li>
-                <li>Ocean: 🌊</li>
-              </ul>
+              <div>
+                <h2>Actions</h2>
+                <p>
+                  Player {this.state.activePlayer}'s turn
+                </p>
+                <p>Select a cell to take an action</p>
+              </div>
+              <div>
+                <h2>Stats</h2>
+                <p>
+                  Number of Players: {this.state.players}
+                </p>
+                <p>Emoji Legend:</p>
+                <ul>
+                  <li>Fertalizer: 💩</li>
+                  <li>Grass: 🌱</li>
+                  <li>Sapling: 🌿</li>
+                  <li>Tree: 🌲</li>
+                  <li>Mountains: ⛰</li>
+                  <li>Ocean: 🌊</li>
+                </ul>
+              </div>
             </aside>
+            {this.state.showSelection && (
+              <SelectionBar
+                onAccept={this.handleEmojiSelection}
+                onDecline={this.handleEmojiClear}
+              >
+                Emoji pre-selected, accept selection?
+              </SelectionBar>
+            )}
           </main>
         )}
-        {this.state.moves &&
-          this.state.moves.map(move => (
-            <pre key={move.key}>{JSON.stringify(move)}</pre>
-          ))}
-      </div>
+      </React.Fragment>
     )
   }
 }
 
-const View = () => (
-  <div>
-    <App />
-  </div>
-)
+const View = () => <App />
 
 export default View
