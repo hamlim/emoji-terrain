@@ -3,6 +3,18 @@ import React, { Component, Fragment } from 'react'
 import logo from './logo.svg'
 import './App.css'
 
+import {
+  Button,
+  Input,
+  Label,
+  Panel,
+  Box,
+  ButtonCircle,
+  Heading,
+  Drawer,
+  Fixed,
+} from 'rebass'
+
 import simplex from 'simplex-noise'
 
 class TerrainGenerator {
@@ -84,47 +96,118 @@ class TerrainGenerator {
   }
 }
 
+class Node {
+  constructor({ id, next = null, prev = null }) {
+    this.id = id
+    this.nextNode = next
+    this.prevNode = prev
+    this.next = this.next.bind(this)
+    this.prev = this.prev.bind(this)
+  }
+  next() {
+    return this.nextNode
+  }
+  prev() {
+    return this.prevNode
+  }
+  setPrev(prev) {
+    this.prevNode = prev
+  }
+  setNext(next) {
+    this.nextNode = next
+  }
+
+  name() {
+    return this.id
+  }
+}
+class LinkedList {
+  constructor(nodes) {
+    this.count = nodes
+    this.makeNodes()
+
+    this.currentNode = this.nodes[0]
+  }
+  makeNodes() {
+    this.nodes = Array.from(
+      { length: this.count },
+      (_, i) => i + 1,
+    ).map(i => new Node({ id: i }))
+    this.nodes.forEach((node, index, nodes) => {
+      if (index !== 0 && index !== nodes.length - 1) {
+        node.setNext(nodes[index + 1])
+        node.setPrev(nodes[index - 1])
+      } else if (index === 0) {
+        node.setNext(nodes[index + 1])
+      } else if (index === nodes.length - 1) {
+        node.setPrev(nodes[index - 1])
+      }
+    })
+    this.nodes[0].setPrev(this.nodes[this.count - 1])
+    this.nodes[this.count - 1].setNext(this.nodes[0])
+    this.nodes[0].setPrev(this.nodes[this.count - 1])
+    this.nodes[this.count - 1].setNext(this.nodes[0])
+  }
+
+  current() {
+    return this.currentNode
+  }
+}
+
 const SYMBOLS = {
   Fertalizer: {
     symbol: <Fragment>💩</Fragment>,
+    name: 'Fertalizer',
   },
   Grass: {
     symbol: <Fragment>🌱</Fragment>,
+    name: 'Grass',
   },
   Sapling: {
     symbol: <Fragment>🌿</Fragment>,
+    name: 'Sapling',
   },
   Trees: {
     symbol: <Fragment>🌲</Fragment>,
+    name: 'Trees',
   },
   Mountain: {
     symbol: <Fragment>⛰</Fragment>,
+    Name: 'Mountain',
   },
   Ocean: {
     symbol: <Fragment>🌊</Fragment>,
+    name: 'Ocean',
   },
   Desert: {
     symbol: <Fragment>🏜️</Fragment>,
+    name: 'Desert',
   },
   'Snowy Mountains': {
     symbol: <Fragment>🏔️</Fragment>,
+    name: 'Snowy Mountains',
   },
   Beach: {
     symbol: <Fragment>🏖</Fragment>,
+    name: 'Beach',
   },
   Corn: {
     symbol: <Fragment>🌽</Fragment>,
+    name: 'Corn',
   },
 }
 
 const APP = {
   init: () => ({
-    players: 0,
+    numberOfPlayers: 0,
     round: 0,
     stage: 1,
     grid: new TerrainGenerator(10, 10, SYMBOLS).generate(),
     moves: [],
+    players: [],
     player: 1,
+    pendingWork: [],
+    promptForEndOfTurn: false,
   }),
 }
 
@@ -145,18 +228,18 @@ const SelectionBar = ({
 }) => (
   <aside className="SelectionBar">
     {children}
-    <button
+    <Button
       onClick={onAccept}
       className="SelectionBar-accept"
     >
       Accept
-    </button>
-    <button
+    </Button>
+    <Button
       onClick={onDecline}
       className="SelectionBar-decline"
     >
       Decline
-    </button>
+    </Button>
   </aside>
 )
 
@@ -188,7 +271,7 @@ class App extends React.Component {
       case EMOJICLICK: {
         this.setState({
           ...action,
-          showSelection: true,
+          showActionDrawer: true,
         })
         break
       }
@@ -214,7 +297,9 @@ class App extends React.Component {
   }
 
   handlePlayersSelection = e => {
-    this.updateState({ players: e.target.value })
+    this.updateState({
+      numberOfPlayers: Number(e.target.value),
+    })
   }
 
   nextState = () =>
@@ -260,20 +345,145 @@ class App extends React.Component {
 
   startGame = () => {
     this.updateState(previousState => {
-      if (previousState.players === 0) {
+      if (previousState.numberOfPlayers === 0) {
         return {
           playerSelectError:
             'You must select more than 0 players!',
         }
       }
+      const players = new LinkedList(
+        previousState.numberOfPlayers,
+      )
       return {
-        activePlayer: 'one',
+        activePlayer: players.current(),
         stage: previousState.stage + 1,
+        players,
       }
     }, STARTGAME)
   }
 
+  fertalize = () => {
+    this.updateState(previousState => {
+      const currentCell = {
+        cell: previousState.selectedEmoji,
+        coords: previousState.selectedCoordinates,
+        type:
+          previousState.selectedEmoji.biome.name === 'Grass'
+            ? 'grass-to-corn'
+            : 'sapling-to-trees',
+      }
+      return {
+        pendingWork: [
+          {
+            type: 'Fertalize',
+            turns: 0,
+            cell: currentCell,
+          },
+          ...previousState.pendingWork,
+        ],
+        promptForEndOfTurn: true,
+      }
+    })
+  }
+
+  toNextTurn = () => {
+    this.updateState(previousState => {
+      const currentPlayer = previousState.activePlayer
+      const numberOfPlayers = previousState.numberOfPlayers
+
+      let newState = {
+        promptForEndOfTurn: false,
+      }
+
+      const { pendingWork } = previousState
+      let newWork = []
+      let updateCells = []
+      if (pendingWork.length) {
+        newWork = pendingWork
+          .map(work => {
+            switch (work.type) {
+              case 'Fertalize': {
+                if (work.turns < 5) {
+                  return {
+                    ...work,
+                    turns: work.turns + 1,
+                  }
+                } else {
+                  updateCells.push(work.cell)
+                  return null
+                }
+              }
+            }
+          })
+          .filter(Boolean)
+      }
+      if (updateCells.length) {
+        /**
+         * updateCells = [
+         *   {
+         *     cell: { biome: { symbol, name} },
+         *     coords: [x, y],
+         *     type: string
+         *   },
+         *   ...
+         * ]
+         */
+        newState = {
+          ...newState,
+          grid: previousState.grid.map((row, x) =>
+            row.map((cell, y) => {
+              const foundUpdate = updateCells.find(
+                cell =>
+                  cell.coords[0] === x &&
+                  cell.coords[1] === y,
+              )
+              if (foundUpdate) {
+                return {
+                  ...cell,
+                  biome: {
+                    ...(foundUpdate.type === 'grass-to-corn'
+                      ? SYMBOLS.Corn
+                      : SYMBOLS.Trees),
+                  },
+                }
+              } else {
+                return cell
+              }
+            }),
+          ),
+        }
+      }
+      if (numberOfPlayers === 1) {
+        return {
+          ...newState,
+          pendingWork: newWork,
+          showActionDrawer: false,
+          selectedEmoji: null,
+          selectedCoordinates: null,
+        }
+      } else {
+        return {
+          ...newState,
+          pendingWork: newWork,
+          showActionDrawer: false,
+          selectedEmoji: null,
+          selectedCoordinates: null,
+          activePlayer: previousState.activePlayer.next(),
+        }
+      }
+    })
+  }
+
+  closeDrawer = () => {
+    this.updateState({ showActionDrawer: false })
+  }
+
   render() {
+    console.log(
+      this.state.activePlayer
+        ? this.state.activePlayer.name()
+        : 'no players yet',
+    )
     return (
       <React.Fragment>
         <style>
@@ -342,24 +552,22 @@ class App extends React.Component {
         </style>
         {this.state.stage === 1 ? (
           <main className="Container">
-            <label>
-              Choose the number of players:
-              <input
-                type="number"
-                value={this.state.players}
+            <Label>Choose the number of players:</Label>
+            <Box p="3">
+              <Input
+                placeholder="2"
+                value={this.state.numberOfPlayers}
                 onChange={this.handlePlayersSelection}
               />
-            </label>
-            <br />
+            </Box>
             {this.state.playerSelectError ? (
               <p className="Error">
                 {this.state.playerSelectError}
               </p>
             ) : null}
-            <br />
-            <button onClick={this.startGame}>
+            <ButtonCircle onClick={this.startGame}>
               Start Game
-            </button>
+            </ButtonCircle>
           </main>
         ) : (
           <main className="Game">
@@ -369,11 +577,7 @@ class App extends React.Component {
                   <EmojiCell
                     key={cell.id}
                     onClick={() =>
-                      this.handleEmojiClick(
-                        cell.biome,
-                        x,
-                        y,
-                      )
+                      this.handleEmojiClick(cell, x, y)
                     }
                   >
                     {cell.biome.symbol}
@@ -385,14 +589,16 @@ class App extends React.Component {
               <div>
                 <h2>Actions</h2>
                 <p>
-                  Player {this.state.activePlayer}'s turn
+                  Player {this.state.activePlayer.name()}'s
+                  turn
                 </p>
                 <p>Select a cell to take an action</p>
               </div>
               <div>
                 <h2>Stats</h2>
                 <p>
-                  Number of Players: {this.state.players}
+                  Number of Players:{' '}
+                  {this.state.numberOfPlayers}
                 </p>
                 <p>Emoji Legend:</p>
                 <ul>
@@ -412,6 +618,68 @@ class App extends React.Component {
               >
                 Emoji pre-selected, accept selection?
               </SelectionBar>
+            )}
+            {this.state.showActionDrawer && (
+              <Fragment>
+                <Fixed
+                  top={0}
+                  right={0}
+                  bottom={0}
+                  left={0}
+                  onClick={this.closeDrawer}
+                />
+                <Drawer
+                  open
+                  position="right"
+                  p={3}
+                  color="black"
+                  bg="#e8fdf5"
+                >
+                  <Heading>Action:</Heading>
+                  {this.state.promptForEndOfTurn ? (
+                    <Button onClick={this.toNextTurn}>
+                      End Turn
+                    </Button>
+                  ) : (
+                    (() => {
+                      console.log(this.state.selectedEmoji)
+                      switch (
+                        this.state.selectedEmoji.biome.name
+                      ) {
+                        case 'Grass': {
+                          return (
+                            <Fragment>
+                              <p>
+                                Fertalize to grow a crop?
+                              </p>
+                              <Button
+                                onClick={this.fertalize}
+                              >
+                                Fertalize
+                              </Button>
+                            </Fragment>
+                          )
+                        }
+                        case 'Sapling': {
+                          return (
+                            <Fragment>
+                              <p>
+                                Fertalize to grow Trees?
+                              </p>
+                              <Button
+                                onClick={this.fertalize}
+                              >
+                                Fertalize
+                              </Button>
+                            </Fragment>
+                          )
+                        }
+                      }
+                      return null
+                    })()
+                  )}
+                </Drawer>
+              </Fragment>
             )}
           </main>
         )}
