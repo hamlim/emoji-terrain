@@ -209,6 +209,155 @@ const APP = {
     pendingWork: [],
     promptForEndOfTurn: false,
   }),
+  startGame: previousState => {
+    if (previousState.numberOfPlayers === 0) {
+      return {
+        playerSelectError:
+          'You must select more than 0 players!',
+      }
+    }
+    const players = new LinkedList(
+      previousState.numberOfPlayers,
+    )
+    return {
+      activePlayer: players.current(),
+      stage: previousState.stage + 1,
+      players,
+    }
+  },
+  selectEmoji: previousState => ({
+    moves: [
+      ...previousState.moves,
+      {
+        key: previousState.moves.length,
+        player: previousState.player,
+        emoji: previousState.selectedEmoji,
+        coordinates: previousState.selectedCoordinates,
+      },
+    ],
+    selectedEmoji: null,
+    selectedCoordinates: null,
+    showSelection: false,
+  }),
+  clearEmoji: {
+    selectedEmoji: null,
+    selectedCoordinates: null,
+    showSelection: false,
+  },
+  handleEmojiClick: (emoji, x, y) => ({
+    selectedEmoji: emoji,
+    selectedCoordinates: [x, y],
+    showActionDrawer: true,
+  }),
+  handlePlayerSelection: e => ({
+    numberOfPlayers: Number(e.target.value),
+  }),
+  fertalize: previousState => {
+    const currentCell = {
+      cell: previousState.selectedEmoji,
+      coords: previousState.selectedCoordinates,
+      type:
+        previousState.selectedEmoji.biome.name === 'Grass'
+          ? 'grass-to-corn'
+          : 'sapling-to-trees',
+    }
+    return {
+      pendingWork: [
+        {
+          type: 'Fertalize',
+          turns: 0,
+          cell: currentCell,
+        },
+        ...previousState.pendingWork,
+      ],
+      promptForEndOfTurn: true,
+    }
+  },
+  toNextTurn: previousState => {
+    const currentPlayer = previousState.activePlayer
+    const numberOfPlayers = previousState.numberOfPlayers
+
+    let newState = {
+      promptForEndOfTurn: false,
+    }
+
+    const { pendingWork } = previousState
+    let newWork = []
+    let updateCells = []
+    if (pendingWork.length) {
+      newWork = pendingWork
+        .map(work => {
+          switch (work.type) {
+            case 'Fertalize': {
+              if (work.turns < 5) {
+                return {
+                  ...work,
+                  turns: work.turns + 1,
+                }
+              } else {
+                updateCells.push(work.cell)
+                return null
+              }
+            }
+          }
+        })
+        .filter(Boolean)
+    }
+    if (updateCells.length) {
+      /**
+       * updateCells = [
+       *   {
+       *     cell: { biome: { symbol, name} },
+       *     coords: [x, y],
+       *     type: string
+       *   },
+       *   ...
+       * ]
+       */
+      newState = {
+        ...newState,
+        grid: previousState.grid.map((row, x) =>
+          row.map((cell, y) => {
+            const foundUpdate = updateCells.find(
+              cell =>
+                cell.coords[0] === x &&
+                cell.coords[1] === y,
+            )
+            if (foundUpdate) {
+              return {
+                ...cell,
+                biome: {
+                  ...(foundUpdate.type === 'grass-to-corn'
+                    ? SYMBOLS.Corn
+                    : SYMBOLS.Trees),
+                },
+              }
+            } else {
+              return cell
+            }
+          }),
+        ),
+      }
+    }
+    if (numberOfPlayers === 1) {
+      return {
+        ...newState,
+        pendingWork: newWork,
+        showActionDrawer: false,
+        selectedEmoji: null,
+        selectedCoordinates: null,
+      }
+    } else {
+      return {
+        ...newState,
+        pendingWork: newWork,
+        showActionDrawer: false,
+        selectedEmoji: null,
+        selectedCoordinates: null,
+        activePlayer: previousState.activePlayer.next(),
+      }
+    }
+  },
 }
 
 const EmojiGrid = ({ children }) => (
@@ -253,239 +402,41 @@ class App extends React.Component {
     ...APP.init(),
   }
 
-  updateState = (update, secondArg = null) => {
-    const updateType = typeof update
-
-    let type, action
-
-    if (updateType === 'function') {
-      type = secondArg
-      action = update
-    } else {
-      ;({ type, ...action } = update)
-    }
-
-    // @TODO
-
-    switch (type) {
-      case EMOJICLICK: {
-        this.setState({
-          ...action,
-          showActionDrawer: true,
-        })
-        break
-      }
-      case CLEAREMOJI: {
-        this.setState({
-          ...action,
-          showSelection: false,
-        })
-        break
-      }
-      case SELECTEMOJI: {
-        this.setState(action)
-        break
-      }
-      case STARTGAME: {
-        this.setState(action)
-        break
-      }
-      default: {
-        this.setState(action)
-      }
-    }
-  }
-
   handlePlayersSelection = e => {
-    this.updateState({
-      numberOfPlayers: Number(e.target.value),
-    })
+    this.setState(APP.handlePlayerSelection(e))
   }
-
-  nextState = () =>
-    this.updateState(s => ({
-      stage: s.stage + 1,
-    }))
 
   handleEmojiClick = (emoji, x, y) => {
-    this.updateState({
-      selectedEmoji: emoji,
-      selectedCoordinates: [x, y],
-      type: EMOJICLICK,
-    })
+    this.setState(APP.handleEmojiClick(emoji, x, y))
   }
 
   handleEmojiSelection = () => {
-    this.updateState(
-      previousState => ({
-        moves: [
-          ...previousState.moves,
-          {
-            key: previousState.moves.length,
-            player: previousState.player,
-            emoji: previousState.selectedEmoji,
-            coordinates: previousState.selectedCoordinates,
-          },
-        ],
-        selectedEmoji: null,
-        selectedCoordinates: null,
-        showSelection: false,
-      }),
-      SELECTEMOJI,
-    )
+    this.setState(APP.selectEmoji)
   }
 
   handleEmojiClear = () => {
-    this.updateState({
-      selectedEmoji: null,
-      selectedCoordinates: null,
-      type: CLEAREMOJI,
-    })
+    this.updateState(APP.clearEmoji)
   }
 
   startGame = () => {
-    this.updateState(previousState => {
-      if (previousState.numberOfPlayers === 0) {
-        return {
-          playerSelectError:
-            'You must select more than 0 players!',
-        }
-      }
-      const players = new LinkedList(
-        previousState.numberOfPlayers,
-      )
-      return {
-        activePlayer: players.current(),
-        stage: previousState.stage + 1,
-        players,
-      }
-    }, STARTGAME)
+    this.setState(APP.startGame)
   }
 
   fertalize = () => {
-    this.updateState(previousState => {
-      const currentCell = {
-        cell: previousState.selectedEmoji,
-        coords: previousState.selectedCoordinates,
-        type:
-          previousState.selectedEmoji.biome.name === 'Grass'
-            ? 'grass-to-corn'
-            : 'sapling-to-trees',
-      }
-      return {
-        pendingWork: [
-          {
-            type: 'Fertalize',
-            turns: 0,
-            cell: currentCell,
-          },
-          ...previousState.pendingWork,
-        ],
-        promptForEndOfTurn: true,
-      }
-    })
+    this.setState(APP.fertalize)
   }
 
   toNextTurn = () => {
-    this.updateState(previousState => {
-      const currentPlayer = previousState.activePlayer
-      const numberOfPlayers = previousState.numberOfPlayers
-
-      let newState = {
-        promptForEndOfTurn: false,
-      }
-
-      const { pendingWork } = previousState
-      let newWork = []
-      let updateCells = []
-      if (pendingWork.length) {
-        newWork = pendingWork
-          .map(work => {
-            switch (work.type) {
-              case 'Fertalize': {
-                if (work.turns < 5) {
-                  return {
-                    ...work,
-                    turns: work.turns + 1,
-                  }
-                } else {
-                  updateCells.push(work.cell)
-                  return null
-                }
-              }
-            }
-          })
-          .filter(Boolean)
-      }
-      if (updateCells.length) {
-        /**
-         * updateCells = [
-         *   {
-         *     cell: { biome: { symbol, name} },
-         *     coords: [x, y],
-         *     type: string
-         *   },
-         *   ...
-         * ]
-         */
-        newState = {
-          ...newState,
-          grid: previousState.grid.map((row, x) =>
-            row.map((cell, y) => {
-              const foundUpdate = updateCells.find(
-                cell =>
-                  cell.coords[0] === x &&
-                  cell.coords[1] === y,
-              )
-              if (foundUpdate) {
-                return {
-                  ...cell,
-                  biome: {
-                    ...(foundUpdate.type === 'grass-to-corn'
-                      ? SYMBOLS.Corn
-                      : SYMBOLS.Trees),
-                  },
-                }
-              } else {
-                return cell
-              }
-            }),
-          ),
-        }
-      }
-      if (numberOfPlayers === 1) {
-        return {
-          ...newState,
-          pendingWork: newWork,
-          showActionDrawer: false,
-          selectedEmoji: null,
-          selectedCoordinates: null,
-        }
-      } else {
-        return {
-          ...newState,
-          pendingWork: newWork,
-          showActionDrawer: false,
-          selectedEmoji: null,
-          selectedCoordinates: null,
-          activePlayer: previousState.activePlayer.next(),
-        }
-      }
-    })
+    this.setState(APP.toNextTurn)
   }
 
   closeDrawer = () => {
-    this.updateState({ showActionDrawer: false })
+    this.setState({ showActionDrawer: false })
   }
 
   render() {
-    console.log(
-      this.state.activePlayer
-        ? this.state.activePlayer.name()
-        : 'no players yet',
-    )
     return (
-      <React.Fragment>
+      <Fragment>
         <style>
           {`
             :root {
@@ -589,7 +540,7 @@ class App extends React.Component {
               <div>
                 <h2>Actions</h2>
                 <p>
-                  Player {this.state.activePlayer.name()}'s
+                  Player {this.state.activePlayer.name()}&apos;s
                   turn
                 </p>
                 <p>Select a cell to take an action</p>
@@ -642,7 +593,6 @@ class App extends React.Component {
                     </Button>
                   ) : (
                     (() => {
-                      console.log(this.state.selectedEmoji)
                       switch (
                         this.state.selectedEmoji.biome.name
                       ) {
@@ -683,7 +633,7 @@ class App extends React.Component {
             )}
           </main>
         )}
-      </React.Fragment>
+      </Fragment>
     )
   }
 }
