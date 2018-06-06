@@ -32,16 +32,16 @@ class TerrainGenerator {
     if (e < 0.12) return this.emoji['Beach']
 
     if (e > 0.8) {
-      // if (m < 0.1) return SCORCHED
+      if (m < 0.1) return this.emoji['Mountain']
       // if (m < 0.2) return BARE
-      // if (m < 0.5) return TUNDRA
+      if (m < 0.5) return this.emoji['Bare Mountain']
       return this.emoji['Snowy Mountains']
     }
 
     if (e > 0.6) {
       if (m < 0.33) return this.emoji['Desert']
       // if (m < 0.66) return SHRUBLAND
-      // return TAIGA
+      return this.emoji['Trees']
     }
 
     if (e > 0.3) {
@@ -54,7 +54,7 @@ class TerrainGenerator {
     // if (m < 0.16) return SUBTROPICAL_DESERT
     if (m < 0.33) return this.emoji['Grass']
     // if (m < 0.66) return TROPICAL_SEASONAL_FOREST
-    // return TROPICAL_RAIN_FOREST
+    return this.emoji['Rain Forest']
 
     return this.emoji['Corn']
   }
@@ -77,9 +77,6 @@ class TerrainGenerator {
           0.9 * this.noise(0.9 * nx, 0.9 * ny) +
           0.4 * this.noise(2.1 * nx, 2.1 * ny) +
           0.15 * this.noise(4.1 * nx, 4.1 * ny)
-        // 1 * this.noise(1 * nx, 1 * ny) +
-        // 2 * this.noise(0.5 * nx, 0.5 * ny) +
-        // 4 * this.noise(0.25 * nx, 0.25 * ny)
         elevation[y][x] = {
           elevation: Math.pow(e, 1.0),
           moisture: Math.pow(m, 1.0),
@@ -163,6 +160,10 @@ const SYMBOLS = {
     symbol: <Fragment>🌱</Fragment>,
     name: 'Grass',
   },
+  Flower: {
+    symbol: <Fragment>🌻</Fragment>,
+    name: 'Flower',
+  },
   Sapling: {
     symbol: <Fragment>🌿</Fragment>,
     name: 'Sapling',
@@ -174,6 +175,10 @@ const SYMBOLS = {
   Mountain: {
     symbol: <Fragment>⛰</Fragment>,
     Name: 'Mountain',
+  },
+  'Bare Mountain': {
+    symbol: <Fragment>🗻</Fragment>,
+    name: 'Bare Mountain',
   },
   Ocean: {
     symbol: <Fragment>🌊</Fragment>,
@@ -195,6 +200,10 @@ const SYMBOLS = {
     symbol: <Fragment>🌽</Fragment>,
     name: 'Corn',
   },
+  'Rain Forest': {
+    symbol: <Fragment>🏝</Fragment>,
+    name: 'Rain Forest',
+  },
 }
 
 const APP = {
@@ -202,7 +211,14 @@ const APP = {
     numberOfPlayers: 0,
     round: 0,
     stage: 1,
-    grid: new TerrainGenerator(10, 10, SYMBOLS).generate(),
+    grid: new TerrainGenerator(20, 20, SYMBOLS)
+      .generate()
+      .map(row =>
+        row.map(cell => ({
+          ...cell,
+          progress: undefined,
+        })),
+      ),
     moves: [],
     players: [],
     player: 1,
@@ -279,17 +295,25 @@ const APP = {
 
     let newState = {
       promptForEndOfTurn: false,
+      showActionDrawer: false,
+      selectedEmoji: null,
+      selectedCoordinates: null,
     }
 
     const { pendingWork } = previousState
     let newWork = []
     let updateCells = []
+    let progressCells = []
     if (pendingWork.length) {
       newWork = pendingWork
         .map(work => {
           switch (work.type) {
             case 'Fertalize': {
               if (work.turns < 5) {
+                progressCells.push({
+                  ...work.cell,
+                  progress: work.turns + 1,
+                })
                 return {
                   ...work,
                   turns: work.turns + 1,
@@ -303,7 +327,7 @@ const APP = {
         })
         .filter(Boolean)
     }
-    if (updateCells.length) {
+    if (updateCells.length || progressCells.length) {
       /**
        * updateCells = [
        *   {
@@ -323,14 +347,25 @@ const APP = {
                 cell.coords[0] === x &&
                 cell.coords[1] === y,
             )
+            const foundProgress = progressCells.find(
+              cell =>
+                cell.coords[0] === x &&
+                cell.coords[1] === y,
+            )
             if (foundUpdate) {
               return {
                 ...cell,
+                progress: undefined,
                 biome: {
                   ...(foundUpdate.type === 'grass-to-corn'
                     ? SYMBOLS.Corn
                     : SYMBOLS.Trees),
                 },
+              }
+            } else if (foundProgress) {
+              return {
+                ...cell,
+                progress: foundProgress.progress,
               }
             } else {
               return cell
@@ -343,20 +378,21 @@ const APP = {
       return {
         ...newState,
         pendingWork: newWork,
-        showActionDrawer: false,
-        selectedEmoji: null,
-        selectedCoordinates: null,
       }
     } else {
       return {
         ...newState,
         pendingWork: newWork,
-        showActionDrawer: false,
-        selectedEmoji: null,
-        selectedCoordinates: null,
         activePlayer: previousState.activePlayer.next(),
       }
     }
+  },
+  harvest: previousState => {
+    const {
+      selectedEmoji,
+      selectedCoordinates,
+    } = previousState
+    // @todo
   },
 }
 
@@ -364,8 +400,16 @@ const EmojiGrid = ({ children }) => (
   <section className="EmojiGrid">{children}</section>
 )
 
-const EmojiCell = ({ children, onClick }) => (
-  <button className="EmojiCell" onClick={onClick}>
+const cx = arr => arr.filter(Boolean).join(' ')
+
+const EmojiCell = ({ children, onClick, progress }) => (
+  <button
+    className={cx([
+      'EmojiCell',
+      progress && `progress-${progress}`,
+    ])}
+    onClick={onClick}
+  >
     {children}
   </button>
 )
@@ -391,11 +435,6 @@ const SelectionBar = ({
     </Button>
   </aside>
 )
-
-const EMOJICLICK = 'EMOJI-CLICK'
-const CLEAREMOJI = 'CLEAREMOJI'
-const SELECTEMOJI = 'SELECTEMOJI'
-const STARTGAME = 'STARTGAME'
 
 class App extends React.Component {
   state = {
@@ -434,73 +473,11 @@ class App extends React.Component {
     this.setState({ showActionDrawer: false })
   }
 
+  harvest = () => this.setState(APP.harvest)
+
   render() {
     return (
       <Fragment>
-        <style>
-          {`
-            :root {
-              font-size: 18px;
-              font-family: sans-serif;
-              box-sizing: border-box;
-            }
-            *,
-            *::before,
-            *::after {
-              box-sizing: inherit;
-            }
-            .Container {
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              max-width: 968px;
-              min-height: 100vh;
-              flex-direction: column;
-            }
-            .Game {
-              display: grid;
-              grid-template-columns: 1fr 300px;
-            }
-            .Error {
-              color: red;
-              text-decoration: underline;
-            }
-
-            .EmojiGrid {
-              display: grid;
-              grid-template-rows: repeat(10, 1fr);
-              grid-template-columns: repeat(10, 1fr);
-            }
-            .EmojiCell {
-              background: none;
-              border: none;
-              padding: 0;
-              font-size: 3rem;
-              text-align: center;
-            }
-
-            .SelectionBar {
-              position: fixed;
-              bottom: 0;
-              left: 0;
-              width: 100%;
-              min-height: 5rem;
-              background-color: mediumspringgreen;
-              display: flex;
-              justify-content: space-around;
-              align-items: center;
-            }
-        
-            .SelectionBar-accept,
-            .SelectionBar-decline {
-              padding: .5em 2em;
-              border: none;
-              border-radius: 5px;
-              font-size: 18px;
-              opacity: .7;
-            }
-          `}
-        </style>
         {this.state.stage === 1 ? (
           <main className="Container">
             <Label>Choose the number of players:</Label>
@@ -527,6 +504,11 @@ class App extends React.Component {
                 row.map((cell, y) => (
                   <EmojiCell
                     key={cell.id}
+                    progress={
+                      typeof cell.progress !== 'undefined'
+                        ? cell.progress
+                        : null
+                    }
                     onClick={() =>
                       this.handleEmojiClick(cell, x, y)
                     }
@@ -553,12 +535,19 @@ class App extends React.Component {
                 </p>
                 <p>Emoji Legend:</p>
                 <ul>
-                  <li>Fertalizer: 💩</li>
+                  {Object.entries(SYMBOLS).map(
+                    ([key, { symbol }]) => (
+                      <li key={key}>
+                        {key}: {symbol}
+                      </li>
+                    ),
+                  )}
+                  {/* <li>Fertalizer: 💩</li>
                   <li>Grass: 🌱</li>
                   <li>Sapling: 🌿</li>
                   <li>Tree: 🌲</li>
                   <li>Mountains: ⛰</li>
-                  <li>Ocean: 🌊</li>
+                  <li>Ocean: 🌊</li> */}
                 </ul>
               </div>
             </aside>
@@ -593,6 +582,21 @@ class App extends React.Component {
                     </Button>
                   ) : (
                     (() => {
+                      if (
+                        this.state.selectedEmoji.progress
+                      ) {
+                        return (
+                          <p>
+                            This cell is in progress, it is
+                            at stage{' '}
+                            {
+                              this.state.selectedEmoji
+                                .progress
+                            }{' '}
+                            of 5.
+                          </p>
+                        )
+                      }
                       switch (
                         this.state.selectedEmoji.biome.name
                       ) {
@@ -621,6 +625,18 @@ class App extends React.Component {
                               >
                                 Fertalize
                               </Button>
+                            </Fragment>
+                          )
+                        }
+                        case 'Corn': {
+                          return (
+                            <Fragment>
+                              <p>Harvest corn?</p>
+                              <button
+                                onClick={this.harvest}
+                              >
+                                Harvest
+                              </button>
                             </Fragment>
                           )
                         }

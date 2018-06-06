@@ -1,28 +1,120 @@
-.App {
+:root {
+  font-size: 18px;
+  font-family: sans-serif;
+  box-sizing: border-box;
+
+  --green: mediumspringgreen;
+}
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+.Container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 968px;
+  min-height: 100vh;
+  flex-direction: column;
+}
+.Game {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+}
+.Error {
+  color: red;
+  text-decoration: underline;
+}
+
+.EmojiGrid {
+  display: grid;
+  grid-template-rows: repeat(20, 1fr);
+  grid-template-columns: repeat(20, 1fr);
+}
+.EmojiCell {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 3rem;
   text-align: center;
+  position: relative;
+  background: transparent;
 }
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 80px;
+.progress-1::after {
+  content: ' ';
+  position: absolute;
+  display: block;
+  height: 20%;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--green);
+  z-index: -1;
+}
+.progress-2::after {
+  content: ' ';
+  position: absolute;
+  display: block;
+  height: 40%;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--green);
+  z-index: -1;
+}
+.progress-3::after {
+  content: ' ';
+  position: absolute;
+  display: block;
+  height: 60%;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--green);
+  z-index: -1;
+}
+.progress-4::after {
+  content: ' ';
+  position: absolute;
+  display: block;
+  height: 80%;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--green);
+  z-index: -1;
+}
+.progress-5::after {
+  content: ' ';
+  position: absolute;
+  display: block;
+  height: 100%;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--green);
+  z-index: -1;
 }
 
-.App-header {
-  background-color: #222;
-  height: 150px;
-  padding: 20px;
-  color: white;
+.SelectionBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  min-height: 5rem;
+  background-color: mediumspringgreen;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
 }
 
-.App-title {
-  font-size: 1.5em;
-}
-
-.App-intro {
-  font-size: large;
-}
-
-@keyframes App-logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.SelectionBar-accept,
+.SelectionBar-decline {
+  padding: 0.5em 2em;
+  border: none;
+  border-radius: 5px;
+  font-size: 18px;
+  opacity: 0.7;
 }
