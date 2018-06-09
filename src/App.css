@@ -42,60 +42,45 @@
   background: transparent;
 }
 
-.progress-1::after {
+[class*='progress']::after {
   content: ' ';
   position: absolute;
   display: block;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--green);
+  z-index: -1;
+}
+
+.progress-1-of-5::after {
   height: 20%;
-  width: 100%;
-  bottom: 0;
-  left: 0;
-  background-color: var(--green);
-  z-index: -1;
 }
-.progress-2::after {
-  content: ' ';
-  position: absolute;
-  display: block;
+.progress-2-of-5::after {
   height: 40%;
-  width: 100%;
-  bottom: 0;
-  left: 0;
-  background-color: var(--green);
-  z-index: -1;
 }
-.progress-3::after {
-  content: ' ';
-  position: absolute;
-  display: block;
+.progress-3-of-5::after {
   height: 60%;
-  width: 100%;
-  bottom: 0;
-  left: 0;
-  background-color: var(--green);
-  z-index: -1;
 }
-.progress-4::after {
-  content: ' ';
-  position: absolute;
-  display: block;
+.progress-4-of-5::after {
   height: 80%;
-  width: 100%;
-  bottom: 0;
-  left: 0;
-  background-color: var(--green);
-  z-index: -1;
 }
-.progress-5::after {
-  content: ' ';
-  position: absolute;
-  display: block;
+.progress-5-of-5::after {
   height: 100%;
-  width: 100%;
-  bottom: 0;
-  left: 0;
-  background-color: var(--green);
-  z-index: -1;
+}
+
+.progress-1-of-1::after {
+  height: 50%;
+}
+
+.progress-1-of-3::after {
+  height: 33.33%;
+}
+.progress-2-of-3::after {
+  height: 66.66%;
+}
+.progress-3-of-3::after {
+  height: 100%;
 }
 
 .SelectionBar {
