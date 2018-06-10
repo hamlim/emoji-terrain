@@ -23,19 +23,41 @@ const EmojiGrid = ({ children, ...rest }) => (
   </section>
 )
 
+let updateCounter = 0
+
+class SyncState extends React.Component {
+  componentDidMount() {
+    try {
+      let s = window.localStorage.getItem('EMOJI_WORLD')
+      if (!s) {
+        return
+      }
+      s = JSON.parse(s)
+      this.props.onInit(s)
+    } catch (e) {
+      return
+    }
+  }
+  componentDidUpdate() {
+    updateCounter++
+    if (updateCounter > 10) {
+      updateCounter = 0
+      const { players, activePlayer, ...state } = this.props.state
+      window.localStorage.setItem('EMOJI_WORLD', JSON.stringify(state))
+    }
+  }
+  render() {
+    return null
+  }
+}
+
 const cx = arr => arr.filter(Boolean).join(' ')
 
-const EmojiCell = ({
-  children,
-  onClick,
-  progress,
-  progressMax,
-}) => (
+const EmojiCell = ({ children, onClick, progress, progressMax }) => (
   <button
     className={cx([
       'EmojiCell',
-      progress &&
-        `progress-${progress}-of-${progressMax || 5}`,
+      progress && `progress-${progress}-of-${progressMax || 5}`,
     ])}
     onClick={onClick}
   >
@@ -43,23 +65,13 @@ const EmojiCell = ({
   </button>
 )
 
-const SelectionBar = ({
-  onAccept,
-  onDecline,
-  children,
-}) => (
+const SelectionBar = ({ onAccept, onDecline, children }) => (
   <aside className="SelectionBar">
     {children}
-    <Button
-      onClick={onAccept}
-      className="SelectionBar-accept"
-    >
+    <Button onClick={onAccept} className="SelectionBar-accept">
       Accept
     </Button>
-    <Button
-      onClick={onDecline}
-      className="SelectionBar-decline"
-    >
+    <Button onClick={onDecline} className="SelectionBar-decline">
       Decline
     </Button>
   </aside>
@@ -67,7 +79,7 @@ const SelectionBar = ({
 
 class App extends React.Component {
   state = {
-    ...APP.init(),
+    ...APP.init()(),
   }
 
   handlePlayersSelection = e => {
@@ -110,9 +122,14 @@ class App extends React.Component {
 
   clearFlowers = () => this.setState(APP.clearFlowers)
 
+  handleStateInit = s => {
+    this.setState(APP.init(s))
+  }
+
   render() {
     return (
       <Fragment>
+        <SyncState state={this.state} onInit={this.handleStateInit} />
         {this.state.stage === 1 ? (
           <main className="Container">
             <Label>Choose the number of players:</Label>
@@ -124,13 +141,9 @@ class App extends React.Component {
               />
             </Box>
             {this.state.playerSelectError ? (
-              <p className="Error">
-                {this.state.playerSelectError}
-              </p>
+              <p className="Error">{this.state.playerSelectError}</p>
             ) : null}
-            <ButtonCircle onClick={this.startGame}>
-              Start Game
-            </ButtonCircle>
+            <ButtonCircle onClick={this.startGame}>Start Game</ButtonCircle>
           </main>
         ) : (
           <main className="Game">
@@ -146,14 +159,11 @@ class App extends React.Component {
                           : null
                       }
                       progressMax={
-                        typeof cell.progressMax !==
-                        'undefined'
+                        typeof cell.progressMax !== 'undefined'
                           ? cell.progressMax
                           : null
                       }
-                      onClick={() =>
-                        this.handleEmojiClick(cell, x, y)
-                      }
+                      onClick={() => this.handleEmojiClick(cell, x, y)}
                     >
                       {cell.biome.symbol}
                     </EmojiCell>
@@ -164,58 +174,29 @@ class App extends React.Component {
             <aside>
               <div>
                 <h2>Actions</h2>
-                <p>
-                  Player {this.state.activePlayer.name()}&apos;s
-                  turn
-                </p>
+                <p>Player {this.state.activePlayer.name()}&apos;s turn</p>
                 <p>Select a cell to take an action</p>
               </div>
               <div>
                 <h2>Stats</h2>
-                <p>
-                  Number of Players:{' '}
-                  {this.state.numberOfPlayers}
-                </p>
+                <p>Number of Players: {this.state.numberOfPlayers}</p>
                 <p>Emoji Legend:</p>
                 <ul>
-                  {Object.entries(SYMBOLS).map(
-                    ([key, { symbol }]) => (
-                      <li key={key}>
-                        {key}: {symbol}
-                      </li>
-                    ),
-                  )}
+                  {Object.entries(SYMBOLS).map(([key, { symbol }]) => (
+                    <li key={key}>
+                      {key}: {symbol}
+                    </li>
+                  ))}
                   {(() => {
-                    const {
-                      activePlayer,
-                      playerStats,
-                    } = this.state
-                    if (
-                      Object.keys(playerStats).length > 0
-                    ) {
+                    const { activePlayer, playerStats } = this.state
+                    if (Object.keys(playerStats).length > 0) {
                       return (
                         <Fragment>
+                          <p>Money: {playerStats[activePlayer.id].currency}</p>
                           <p>
-                            Money:{' '}
-                            {
-                              playerStats[activePlayer.id]
-                                .currency
-                            }
+                            Lumber: {playerStats[activePlayer.id].stock.lumber}
                           </p>
-                          <p>
-                            Lumber:{' '}
-                            {
-                              playerStats[activePlayer.id]
-                                .stock.lumber
-                            }
-                          </p>
-                          <p>
-                            Corn:{' '}
-                            {
-                              playerStats[activePlayer.id]
-                                .stock.corn
-                            }
-                          </p>
+                          <p>Corn: {playerStats[activePlayer.id].stock.corn}</p>
                         </Fragment>
                       )
                     }
@@ -240,18 +221,10 @@ class App extends React.Component {
                   left={0}
                   onClick={this.closeDrawer}
                 />
-                <Drawer
-                  open
-                  position="right"
-                  p={3}
-                  color="black"
-                  bg="#e8fdf5"
-                >
+                <Drawer open position="right" p={3} color="black" bg="#e8fdf5">
                   <Heading>Action:</Heading>
                   {this.state.promptForEndOfTurn ? (
-                    <Button onClick={this.toNextTurn}>
-                      End Turn
-                    </Button>
+                    <Button onClick={this.toNextTurn}>End Turn</Button>
                   ) : (
                     <DrawerActions
                       state={this.state}

@@ -34,8 +34,8 @@
 
 .EmojiGrid {
   display: grid;
-  grid-template-rows: repeat(20, 1fr);
-  grid-template-columns: repeat(20, 1fr);
+  grid-template-rows: repeat(100, 1fr);
+  grid-template-columns: repeat(100, 1fr);
 }
 .EmojiCell {
   background: none;

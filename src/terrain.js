@@ -30,7 +30,7 @@ export default class TerrainGenerator {
       if (m < 0.16) return this.emoji['Desert']
       if (m < 0.5) return this.emoji['Grass']
       if (m < 0.83) return this.emoji['Trees']
-      // return TEMPERATE_RAIN_FOREST
+      return this.emoji['Rain Forest']
     }
 
     // if (m < 0.16) return SUBTROPICAL_DESERT

@@ -22,6 +22,13 @@ class Node {
   name() {
     return this.id
   }
+
+  toString() {
+    return JSON.stringify({
+      name: this.id,
+      id: this.id,
+    })
+  }
 }
 export default class LinkedList {
   constructor(nodes) {
@@ -31,10 +38,9 @@ export default class LinkedList {
     this.currentNode = this.nodes[0]
   }
   makeNodes() {
-    this.nodes = Array.from(
-      { length: this.count },
-      (_, i) => i + 1,
-    ).map(i => new Node({ id: i }))
+    this.nodes = Array.from({ length: this.count }, (_, i) => i + 1).map(
+      i => new Node({ id: i }),
+    )
     this.nodes.forEach((node, index, nodes) => {
       if (index !== 0 && index !== nodes.length - 1) {
         node.setNext(nodes[index + 1])
@@ -53,5 +59,12 @@ export default class LinkedList {
 
   current() {
     return this.currentNode
+  }
+
+  toString() {
+    return JSON.stringify({
+      count: this.count,
+      current: this.currentNode.toString(),
+    })
   }
 }

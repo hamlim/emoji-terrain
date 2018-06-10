@@ -6,59 +6,59 @@ import { EMOJI_TYPES } from './env.js'
 
 export const SYMBOLS = {
   [EMOJI_TYPES.Fertalizer]: {
-    symbol: <Fragment>💩</Fragment>,
+    symbol: '💩',
     name: EMOJI_TYPES.Fertalizer,
   },
   [EMOJI_TYPES.Grass]: {
-    symbol: <Fragment>🌱</Fragment>,
+    symbol: '🌱',
     name: EMOJI_TYPES.Grass,
   },
   [EMOJI_TYPES.Flower]: {
-    symbol: <Fragment>🌻</Fragment>,
+    symbol: '🌻',
     name: EMOJI_TYPES.Flower,
   },
   [EMOJI_TYPES.Sapling]: {
-    symbol: <Fragment>🌿</Fragment>,
+    symbol: '🌿',
     name: EMOJI_TYPES.Sapling,
   },
   [EMOJI_TYPES.Trees]: {
-    symbol: <Fragment>🌲</Fragment>,
+    symbol: '🌲',
     name: EMOJI_TYPES.Trees,
   },
   [EMOJI_TYPES.Mountain]: {
-    symbol: <Fragment>⛰</Fragment>,
+    symbol: '⛰',
     Name: EMOJI_TYPES.Mountain,
   },
   [EMOJI_TYPES['Bare Mountain']]: {
-    symbol: <Fragment>🗻</Fragment>,
+    symbol: '🗻',
     name: EMOJI_TYPES['Bare Mountain'],
   },
   [EMOJI_TYPES.Ocean]: {
-    symbol: <Fragment>🌊</Fragment>,
+    symbol: '🌊',
     name: EMOJI_TYPES.Ocean,
   },
   [EMOJI_TYPES.Desert]: {
-    symbol: <Fragment>🏜️</Fragment>,
+    symbol: '🏜️',
     name: EMOJI_TYPES.Desert,
   },
   [EMOJI_TYPES['Snowy Mountains']]: {
-    symbol: <Fragment>🏔️</Fragment>,
+    symbol: '🏔️',
     name: EMOJI_TYPES['Snowy Mountains'],
   },
   [EMOJI_TYPES.Beach]: {
-    symbol: <Fragment>🏖</Fragment>,
+    symbol: '🏖',
     name: EMOJI_TYPES.Beach,
   },
   [EMOJI_TYPES.Corn]: {
-    symbol: <Fragment>🌽</Fragment>,
+    symbol: '🌽',
     name: EMOJI_TYPES.Corn,
   },
   [EMOJI_TYPES['Rain Forest']]: {
-    symbol: <Fragment>🏝</Fragment>,
+    symbol: '🏝',
     name: EMOJI_TYPES['Rain Forest'],
   },
   [EMOJI_TYPES.House]: {
-    symbol: <Fragment>🏠</Fragment>,
+    symbol: '🏠',
     name: EMOJI_TYPES.House,
   },
 }
@@ -72,36 +72,58 @@ const WORK_TYPES = {
 }
 
 export default {
-  init: () => ({
-    numberOfPlayers: 0,
-    round: 0,
-    stage: 1,
-    grid: new TerrainGenerator(40, 40, SYMBOLS)
-      .generate()
-      .map(row =>
-        row.map(cell => ({
-          ...cell,
-          progress: undefined,
-        })),
-      ),
-    moves: [],
-    players: [],
-    player: 1,
-    pendingWork: [],
-    promptForEndOfTurn: false,
-    playerStats: {},
-    activePlayer: {},
-  }),
+  init: (s = null) => () => {
+    if (s === null) {
+      return {
+        numberOfPlayers: 0,
+        round: 0,
+        stage: 1,
+        grid: new TerrainGenerator(100, 100, SYMBOLS).generate().map(row =>
+          row.map(cell => ({
+            ...cell,
+            progress: undefined,
+          })),
+        ),
+        moves: [],
+        players: [],
+        player: 1,
+        pendingWork: [],
+        promptForEndOfTurn: false,
+        playerStats: {},
+        activePlayer: {},
+      }
+    } else {
+      const players = new LinkedList(s.numberOfPlayers)
+      const activePlayer = players.current()
+      return {
+        numberOfPlayers: s.numberOfPlayers || 0,
+        round: s.round || 0,
+        stage: s.stage || 0,
+        grid:
+          s.grid ||
+          new TerrainGenerator(100, 100, SYMBOLS).generate().map(row =>
+            row.map(cell => ({
+              ...cell,
+              progress: undefined,
+            })),
+          ),
+        moves: s.moves || [],
+        players: players,
+        player: s.player || 1,
+        pendingWork: s.pendingWork || [],
+        promptForEndOfTurn: s.promptForEndOfTurn || false,
+        playerStats: s.playerStats || {},
+        activePlayer: activePlayer,
+      }
+    }
+  },
   startGame: previousState => {
     if (previousState.numberOfPlayers === 0) {
       return {
-        playerSelectError:
-          'You must select more than 0 players!',
+        playerSelectError: 'You must select more than 0 players!',
       }
     }
-    const players = new LinkedList(
-      previousState.numberOfPlayers,
-    )
+    const players = new LinkedList(previousState.numberOfPlayers)
     return {
       activePlayer: players.current(),
       stage: previousState.stage + 1,
@@ -197,15 +219,10 @@ export default {
        *   ...
        * ]
        */
-      let currency = previousState.playerStats[
-        currentPlayer.id
-      ]
-        ? previousState.playerStats[currentPlayer.id]
-            .currency
+      let currency = previousState.playerStats[currentPlayer.id]
+        ? previousState.playerStats[currentPlayer.id].currency
         : 0
-      let stock = previousState.playerStats[
-        currentPlayer.id
-      ]
+      let stock = previousState.playerStats[currentPlayer.id]
         ? previousState.playerStats[currentPlayer.id].stock
         : {
             lumber: 0,
@@ -214,46 +231,34 @@ export default {
       let newGrid = previousState.grid.map((row, x) =>
         row.map((cell, y) => {
           const foundUpdate = updateCells.find(
-            cell =>
-              cell.coords[0] === x && cell.coords[1] === y,
+            cell => cell.coords[0] === x && cell.coords[1] === y,
           )
           const foundProgress = progressCells.find(
-            cell =>
-              cell.coords[0] === x && cell.coords[1] === y,
+            cell => cell.coords[0] === x && cell.coords[1] === y,
           )
           if (foundUpdate) {
             let newCell
             if (foundUpdate.isUnlucky) {
               newCell = SYMBOLS.Flower
-            } else if (
-              foundUpdate.type === WORK_TYPES.FERTALIZE
-            ) {
+            } else if (foundUpdate.type === WORK_TYPES.FERTALIZE) {
               newCell = SYMBOLS.Corn
-            } else if (
-              foundUpdate.type === WORK_TYPES.HARVEST
-            ) {
+            } else if (foundUpdate.type === WORK_TYPES.HARVEST) {
               newCell = SYMBOLS.Grass
               currency += 10
               stock = {
                 ...stock,
                 corn: stock.corn + 1,
               }
-            } else if (
-              foundUpdate.type === WORK_TYPES.GROW
-            ) {
+            } else if (foundUpdate.type === WORK_TYPES.GROW) {
               newCell = SYMBOLS.Trees
-            } else if (
-              foundUpdate.type === WORK_TYPES.CHOP
-            ) {
+            } else if (foundUpdate.type === WORK_TYPES.CHOP) {
               newCell = SYMBOLS.Sapling
               currency += 50
               stock = {
                 ...stock,
                 lumber: stock.lumber + 10,
               }
-            } else if (
-              foundUpdate.type === WORK_TYPES.BUILD_HOUSE
-            ) {
+            } else if (foundUpdate.type === WORK_TYPES.BUILD_HOUSE) {
               newCell = SYMBOLS.House
               stock = {
                 ...stock,
@@ -310,7 +315,7 @@ export default {
       cell: previousState.selectedEmoji,
       coords: previousState.selectedCoordinates,
       type:
-        previousState.selectedEmoji.biome.name === 'Grass'
+        previousState.selectedEmoji.biome.name === EMOJI_TYPES.Grass
           ? WORK_TYPES.FERTALIZE
           : WORK_TYPES.GROW,
     }
@@ -328,10 +333,7 @@ export default {
     }
   },
   harvest: previousState => {
-    const {
-      selectedEmoji,
-      selectedCoordinates,
-    } = previousState
+    const { selectedEmoji, selectedCoordinates } = previousState
     const currentCell = {
       cell: selectedEmoji,
       coords: selectedCoordinates,
@@ -351,10 +353,7 @@ export default {
     }
   },
   chop: previousState => {
-    const {
-      selectedCoordinates,
-      selectedEmoji,
-    } = previousState
+    const { selectedCoordinates, selectedEmoji } = previousState
     const currentCell = {
       cell: selectedEmoji,
       coords: selectedCoordinates,
@@ -374,10 +373,7 @@ export default {
     }
   },
   buildHouse: previousState => {
-    const {
-      selectedCoordinates,
-      selectedEmoji,
-    } = previousState
+    const { selectedCoordinates, selectedEmoji } = previousState
 
     const currentCell = {
       cell: selectedEmoji,
@@ -399,10 +395,7 @@ export default {
     }
   },
   clearFlowers: previousState => {
-    const {
-      selectedCoordinates,
-      selectedEmoji,
-    } = previousState
+    const { selectedCoordinates, selectedEmoji } = previousState
 
     const currentCell = {
       cell: selectedEmoji,
