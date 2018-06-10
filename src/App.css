@@ -20,7 +20,7 @@
 }
 .Game {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: minmax(1fr, 700px) 300px;
 }
 .Error {
   color: red;
@@ -80,6 +80,31 @@
   height: 66.66%;
 }
 .progress-3-of-3::after {
+  height: 100%;
+}
+
+.progress-1-of-8::after {
+  height: 12.5%;
+}
+.progress-2-of-8::after {
+  height: 25%;
+}
+.progress-3-of-8::after {
+  height: 37.5%;
+}
+.progress-4-of-8::after {
+  height: 50%;
+}
+.progress-5-of-8::after {
+  height: 62.5%;
+}
+.progress-6-of-8::after {
+  height: 75%;
+}
+.progress-7-of-8::after {
+  height: 87.5%;
+}
+.progress-8-of-8::after {
   height: 100%;
 }
 

@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { Fragment } from 'react'
 import TerrainGenerator from './terrain.js'
-import LinkedList from './LinkedList.js'
+import LinkedList from './linked-list.js'
 
 export const SYMBOLS = {
   Fertalizer: {
@@ -56,6 +56,10 @@ export const SYMBOLS = {
     symbol: <Fragment>🏝</Fragment>,
     name: 'Rain Forest',
   },
+  House: {
+    symbol: <Fragment>🏠</Fragment>,
+    name: 'House',
+  },
 }
 
 const WORK_TYPES = {
@@ -63,6 +67,7 @@ const WORK_TYPES = {
   GROW: 'sapling-to-tree',
   HARVEST: 'corn-to-grass',
   CHOP: 'tree-to-sapling',
+  BUILD_HOUSE: 'build-house',
 }
 
 export default {
@@ -146,10 +151,20 @@ export default {
     if (pendingWork.length) {
       newWork = pendingWork
         .map(work => {
+          let random = Math.random()
+          let isUnlucky = random < 0.1
           switch (work.type) {
             case WORK_TYPES.FERTALIZE:
             case WORK_TYPES.HARVEST:
-            case WORK_TYPES.CHOP: {
+            case WORK_TYPES.CHOP:
+            case WORK_TYPES.BUILD_HOUSE: {
+              if (isUnlucky) {
+                updateCells.push({
+                  ...work.cell,
+                  isUnlucky: true,
+                })
+                return null
+              }
               if (work.turns < work.numberOfTurns) {
                 progressCells.push({
                   ...work.cell,
@@ -206,7 +221,11 @@ export default {
           )
           if (foundUpdate) {
             let newCell
-            if (foundUpdate.type === WORK_TYPES.FERTALIZE) {
+            if (foundUpdate.isUnlucky) {
+              newCell = SYMBOLS.Flower
+            } else if (
+              foundUpdate.type === WORK_TYPES.FERTALIZE
+            ) {
               newCell = SYMBOLS.Corn
             } else if (
               foundUpdate.type === WORK_TYPES.HARVEST
@@ -230,6 +249,15 @@ export default {
                 ...stock,
                 lumber: stock.lumber + 10,
               }
+            } else if (
+              foundUpdate.type === WORK_TYPES.BUILD_HOUSE
+            ) {
+              newCell = SYMBOLS.House
+              stock = {
+                ...stock,
+                lumber: stock.lumber - 50,
+              }
+              currency -= 100
             }
             return {
               ...cell,
@@ -336,6 +364,56 @@ export default {
           type: WORK_TYPES.CHOP,
           turns: 0,
           numberOfTurns: 3,
+          cell: currentCell,
+        },
+        ...previousState.pendingWork,
+      ],
+      promptForEndOfTurn: true,
+    }
+  },
+  buildHouse: previousState => {
+    const {
+      selectedCoordinates,
+      selectedEmoji,
+    } = previousState
+
+    const currentCell = {
+      cell: selectedEmoji,
+      coords: selectedCoordinates,
+      type: WORK_TYPES.BUILD_HOUSE,
+    }
+
+    return {
+      pendingWork: [
+        {
+          type: WORK_TYPES.BUILD_HOUSE,
+          turns: 0,
+          numberOfTurns: 8,
+          cell: currentCell,
+        },
+        ...previousState.pendingWork,
+      ],
+      promptForEndOfTurn: true,
+    }
+  },
+  clearFlowers: previousState => {
+    const {
+      selectedCoordinates,
+      selectedEmoji,
+    } = previousState
+
+    const currentCell = {
+      cell: selectedEmoji,
+      coords: selectedCoordinates,
+      type: WORK_TYPES.HARVEST,
+    }
+
+    return {
+      pendingWork: [
+        {
+          type: WORK_TYPES.HARVEST,
+          turns: 0,
+          numberOfTurns: 5,
           cell: currentCell,
         },
         ...previousState.pendingWork,

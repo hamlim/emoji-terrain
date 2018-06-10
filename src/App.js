@@ -6,7 +6,6 @@ import {
   Button,
   Input,
   Label,
-  Panel,
   Box,
   ButtonCircle,
   Heading,
@@ -16,8 +15,12 @@ import {
 
 import APP, { SYMBOLS } from './state.js'
 
-const EmojiGrid = ({ children }) => (
-  <section className="EmojiGrid">{children}</section>
+import DrawerActions from './DrawerActions.js'
+
+const EmojiGrid = ({ children, ...rest }) => (
+  <section className="EmojiGrid" {...rest}>
+    {children}
+  </section>
 )
 
 const cx = arr => arr.filter(Boolean).join(' ')
@@ -102,6 +105,10 @@ class App extends React.Component {
   harvest = () => this.setState(APP.harvest)
 
   chop = () => this.setState(APP.chop)
+
+  buildHouse = () => this.setState(APP.buildHouse)
+
+  clearFlowers = () => this.setState(APP.clearFlowers)
 
   render() {
     return (
@@ -244,82 +251,14 @@ class App extends React.Component {
                       End Turn
                     </Button>
                   ) : (
-                    (() => {
-                      if (
-                        this.state.selectedEmoji.progress
-                      ) {
-                        return (
-                          <p>
-                            This cell is in progress, it is
-                            at stage{' '}
-                            {
-                              this.state.selectedEmoji
-                                .progress
-                            }{' '}
-                            of{' '}
-                            {
-                              this.state.selectedEmoji
-                                .progressMax
-                            }.
-                          </p>
-                        )
-                      }
-                      switch (
-                        this.state.selectedEmoji.biome.name
-                      ) {
-                        case 'Grass': {
-                          return (
-                            <Fragment>
-                              <p>
-                                Fertalize to grow a crop?
-                              </p>
-                              <Button
-                                onClick={this.fertalize}
-                              >
-                                Fertalize
-                              </Button>
-                            </Fragment>
-                          )
-                        }
-                        case 'Sapling': {
-                          return (
-                            <Fragment>
-                              <p>
-                                Fertalize to grow Trees?
-                              </p>
-                              <Button
-                                onClick={this.fertalize}
-                              >
-                                Fertalize
-                              </Button>
-                            </Fragment>
-                          )
-                        }
-                        case 'Corn': {
-                          return (
-                            <Fragment>
-                              <p>Harvest corn?</p>
-                              <Button
-                                onClick={this.harvest}
-                              >
-                                Harvest
-                              </Button>
-                            </Fragment>
-                          )
-                        }
-                        case 'Trees': {
-                          return (
-                            <Fragment>
-                              <p>Chop down trees?</p>
-                              <Button onClick={this.chop}>
-                                Chop
-                              </Button>
-                            </Fragment>
-                          )
-                        }
-                      }
-                      return null
-                    })()
+                    <DrawerActions
+                      state={this.state}
+                      fertalize={this.fertalize}
+                      harvest={this.harvest}
+                      chop={this.chop}
+                      buildHouse={this.buildHouse}
+                      clearFlowers={this.clearFlowers}
+                    />
                   )}
                 </Drawer>
               </Fragment>
