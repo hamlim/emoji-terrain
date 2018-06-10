@@ -260,11 +260,6 @@ export default {
               }
             } else if (foundUpdate.type === WORK_TYPES.BUILD_HOUSE) {
               newCell = SYMBOLS.House
-              stock = {
-                ...stock,
-                lumber: stock.lumber - 50,
-              }
-              currency -= 100
             }
             return {
               ...cell,
@@ -382,6 +377,21 @@ export default {
     }
 
     return {
+      playerStats: {
+        ...previousState.playerStats,
+        [previousState.activePlayer.id]: {
+          ...previousState.playerStats[previousState.activePlayer.id],
+          currency:
+            previousState.playerStats[previousState.activePlayer.id].currency -
+            100,
+          stock: {
+            ...previousState.playerStats[previousState.activePlayer.id].stock,
+            lumber:
+              previousState.playerStats[previousState.activePlayer.id].stock
+                .lumber - 50,
+          },
+        },
+      },
       pendingWork: [
         {
           type: WORK_TYPES.BUILD_HOUSE,
