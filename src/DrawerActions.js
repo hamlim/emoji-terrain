@@ -2,6 +2,7 @@
 import React, { Fragment } from 'react'
 
 import { Button } from 'rebass'
+import { EMOJI_TYPES } from './env.js'
 
 const DrawerActions = ({
   state,
@@ -28,7 +29,7 @@ const DrawerActions = ({
     playerStats[activePlayer.id].currency > 100
 
   switch (state.selectedEmoji.biome.name) {
-    case 'Grass': {
+    case EMOJI_TYPES.Grass: {
       return (
         <Fragment>
           <p>Fertalize to grow a crop?</p>
@@ -47,7 +48,7 @@ const DrawerActions = ({
         </Fragment>
       )
     }
-    case 'Sapling': {
+    case EMOJI_TYPES.Sapling: {
       return (
         <Fragment>
           <p>Fertalize to grow Trees?</p>
@@ -66,7 +67,7 @@ const DrawerActions = ({
         </Fragment>
       )
     }
-    case 'Corn': {
+    case EMOJI_TYPES.Corn: {
       return (
         <Fragment>
           <p>Harvest corn?</p>
@@ -74,7 +75,7 @@ const DrawerActions = ({
         </Fragment>
       )
     }
-    case 'Trees': {
+    case EMOJI_TYPES.Trees: {
       return (
         <Fragment>
           <p>Chop down trees?</p>
@@ -93,7 +94,7 @@ const DrawerActions = ({
         </Fragment>
       )
     }
-    case 'Flower': {
+    case EMOJI_TYPES.Flower: {
       return (
         <Fragment>
           <p>Clear Flowers for harvesting?</p>

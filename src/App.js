@@ -134,31 +134,33 @@ class App extends React.Component {
           </main>
         ) : (
           <main className="Game">
-            <EmojiGrid>
-              {this.state.grid.map((row, x) =>
-                row.map((cell, y) => (
-                  <EmojiCell
-                    key={cell.id}
-                    progress={
-                      typeof cell.progress !== 'undefined'
-                        ? cell.progress
-                        : null
-                    }
-                    progressMax={
-                      typeof cell.progressMax !==
-                      'undefined'
-                        ? cell.progressMax
-                        : null
-                    }
-                    onClick={() =>
-                      this.handleEmojiClick(cell, x, y)
-                    }
-                  >
-                    {cell.biome.symbol}
-                  </EmojiCell>
-                )),
-              )}
-            </EmojiGrid>
+            <div className="GridContainer">
+              <EmojiGrid>
+                {this.state.grid.map((row, x) =>
+                  row.map((cell, y) => (
+                    <EmojiCell
+                      key={cell.id}
+                      progress={
+                        typeof cell.progress !== 'undefined'
+                          ? cell.progress
+                          : null
+                      }
+                      progressMax={
+                        typeof cell.progressMax !==
+                        'undefined'
+                          ? cell.progressMax
+                          : null
+                      }
+                      onClick={() =>
+                        this.handleEmojiClick(cell, x, y)
+                      }
+                    >
+                      {cell.biome.symbol}
+                    </EmojiCell>
+                  )),
+                )}
+              </EmojiGrid>
+            </div>
             <aside>
               <div>
                 <h2>Actions</h2>

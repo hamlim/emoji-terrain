@@ -1,0 +1,16 @@
+export const EMOJI_TYPES = {
+  Grass: 'Grass',
+  Sapling: 'Sapling',
+  Corn: 'Corn',
+  Trees: 'Trees',
+  House: 'House',
+  Flower: 'Flower',
+  Fertalizer: 'Fertalizer',
+  Mountain: 'Mountain',
+  'Bare Mountain': 'Bare Mountain',
+  Ocean: 'Ocean',
+  Desert: 'Desert',
+  'Snowy Mountains': 'Snowy Mountains',
+  Beach: 'Beach',
+  'Rain Forest': 'Rain Forest',
+}

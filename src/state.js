@@ -2,63 +2,64 @@
 import React, { Fragment } from 'react'
 import TerrainGenerator from './terrain.js'
 import LinkedList from './linked-list.js'
+import { EMOJI_TYPES } from './env.js'
 
 export const SYMBOLS = {
-  Fertalizer: {
+  [EMOJI_TYPES.Fertalizer]: {
     symbol: <Fragment>💩</Fragment>,
-    name: 'Fertalizer',
+    name: EMOJI_TYPES.Fertalizer,
   },
-  Grass: {
+  [EMOJI_TYPES.Grass]: {
     symbol: <Fragment>🌱</Fragment>,
-    name: 'Grass',
+    name: EMOJI_TYPES.Grass,
   },
-  Flower: {
+  [EMOJI_TYPES.Flower]: {
     symbol: <Fragment>🌻</Fragment>,
-    name: 'Flower',
+    name: EMOJI_TYPES.Flower,
   },
-  Sapling: {
+  [EMOJI_TYPES.Sapling]: {
     symbol: <Fragment>🌿</Fragment>,
-    name: 'Sapling',
+    name: EMOJI_TYPES.Sapling,
   },
-  Trees: {
+  [EMOJI_TYPES.Trees]: {
     symbol: <Fragment>🌲</Fragment>,
-    name: 'Trees',
+    name: EMOJI_TYPES.Trees,
   },
-  Mountain: {
+  [EMOJI_TYPES.Mountain]: {
     symbol: <Fragment>⛰</Fragment>,
-    Name: 'Mountain',
+    Name: EMOJI_TYPES.Mountain,
   },
-  'Bare Mountain': {
+  [EMOJI_TYPES['Bare Mountain']]: {
     symbol: <Fragment>🗻</Fragment>,
-    name: 'Bare Mountain',
+    name: EMOJI_TYPES['Bare Mountain'],
   },
-  Ocean: {
+  [EMOJI_TYPES.Ocean]: {
     symbol: <Fragment>🌊</Fragment>,
-    name: 'Ocean',
+    name: EMOJI_TYPES.Ocean,
   },
-  Desert: {
+  [EMOJI_TYPES.Desert]: {
     symbol: <Fragment>🏜️</Fragment>,
-    name: 'Desert',
+    name: EMOJI_TYPES.Desert,
   },
-  'Snowy Mountains': {
+  [EMOJI_TYPES['Snowy Mountains']]: {
     symbol: <Fragment>🏔️</Fragment>,
-    name: 'Snowy Mountains',
+    name: EMOJI_TYPES['Snowy Mountains'],
   },
-  Beach: {
+  [EMOJI_TYPES.Beach]: {
     symbol: <Fragment>🏖</Fragment>,
-    name: 'Beach',
+    name: EMOJI_TYPES.Beach,
   },
-  Corn: {
+  [EMOJI_TYPES.Corn]: {
     symbol: <Fragment>🌽</Fragment>,
-    name: 'Corn',
+    name: EMOJI_TYPES.Corn,
   },
-  'Rain Forest': {
+  [EMOJI_TYPES['Rain Forest']]: {
     symbol: <Fragment>🏝</Fragment>,
-    name: 'Rain Forest',
+    name: EMOJI_TYPES['Rain Forest'],
   },
-  House: {
+  [EMOJI_TYPES.House]: {
     symbol: <Fragment>🏠</Fragment>,
-    name: 'House',
+    name: EMOJI_TYPES.House,
   },
 }
 
@@ -75,7 +76,7 @@ export default {
     numberOfPlayers: 0,
     round: 0,
     stage: 1,
-    grid: new TerrainGenerator(20, 20, SYMBOLS)
+    grid: new TerrainGenerator(40, 40, SYMBOLS)
       .generate()
       .map(row =>
         row.map(cell => ({
@@ -89,6 +90,7 @@ export default {
     pendingWork: [],
     promptForEndOfTurn: false,
     playerStats: {},
+    activePlayer: {},
   }),
   startGame: previousState => {
     if (previousState.numberOfPlayers === 0) {
@@ -152,7 +154,7 @@ export default {
       newWork = pendingWork
         .map(work => {
           let random = Math.random()
-          let isUnlucky = random < 0.1
+          let isUnlucky = random < 0.001
           switch (work.type) {
             case WORK_TYPES.FERTALIZE:
             case WORK_TYPES.HARVEST:
